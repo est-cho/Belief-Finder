@@ -337,13 +337,23 @@ def convert_statement_to_string(prefix, s):
     out = out + s.p_right.v_right.type + '(i=' + str(s.p_right.v_right.index) + ', t=' + str(s.p_right.v_right.time) + '))'
     return out
 
+def write_to_csv(population_fitness, output_prefix=''):
+    with open(output_prefix + 'evaluation.csv', 'w', newline='') as csvfile: 
+        csv_writer = csv.writer(csvfile) 
+        csv_writer.writerow(['Statements', 'tp', 'tn', 'fp', 'fn', 'Score'])
+        idx = 1
+        for m in sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True):
+            csv_writer.writerow([convert_statement_to_string(str(idx), m[0]), m[1], m[2], m[3], m[4], m[5]])
+            idx += 1
+        
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Belief-Finder')
     parser.add_argument('-d', '--data', required=True)
     parser.add_argument('-o', '--output-prefix', required=False)
     parser.add_argument('-i', '--initial-population', default=200, type=int)
     parser.add_argument('-p', '--population-size', default=100, type=int)
-    parser.add_argument('-c', '--crossover-rate', default=0.8, type=float)
+    parser.add_argument('-c', '--crossover-rate', default=0.6, type=float)
     parser.add_argument('-m', '--mutation-rate', default=0.2, type=float)
     parser.add_argument('-b', '--budget', default=1, type=int)
     
@@ -373,7 +383,7 @@ if __name__ == '__main__':
         parent_fitness = population_fitness[:num_population]
         best = parent_fitness[0]
         # print('Best Fitness: {0}, tp: {2}\n\t{1}'.format(best[5], convert_statement_to_string('', best[0]), best[1]))
-        # print('Best Fitness: {0}, tp: {1}'.format(best[5], best[1]))
+        print('Best Fitness: {0}, tp: {1}'.format(best[5], best[1]))
 
         p_len = len(population_fitness)
         p_half = int(p_len / 2)
@@ -385,21 +395,22 @@ if __name__ == '__main__':
         for i in range(p_len):
             if i >= p_half:
                 break
+            # print('Parent 1: {0}'.format(convert_statement_to_string('', population_fitness[i][0])))
+            # print('Parent 2: {0}'.format(convert_statement_to_string('', population_fitness[i+p_half][0])))
             copy_s1 = population_fitness[i][0].copy()
             copy_s2 = population_fitness[i+p_half][0].copy()
-            
-            # print('Parent 1: {0}'.format(convert_statement_to_string('', copy_s1)))
-            # print('Parent 2: {0}'.format(convert_statement_to_string('', copy_s2)))
             (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate, is_prop_crossover)
             # print('Offspring-x 1: {0}'.format(convert_statement_to_string('', o1)))
-            # print('Offspring-x 2: {0}'.format(convert_statement_to_string('', o1)))
+            # print('Offspring-x 2: {0}'.format(convert_statement_to_string('', o2)))
             o1 = mutate(o1, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
             o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
             # print('Offspring-m 1: {0}'.format(convert_statement_to_string('', o1)))
-            # print('Offspring-m 2: {0}'.format(convert_statement_to_string('', o1)))
+            # print('Offspring-m 2: {0}'.format(convert_statement_to_string('', o2)))
             offspring.append(o1)
             offspring.append(o2)
             
         offspring_fitness = evaluate_population(offspring, const_values, var_data)
         population_fitness = parent_fitness + offspring_fitness
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
+    parent_fitness = population_fitness[:num_population]
+    write_to_csv(parent_fitness, output_prefix)
