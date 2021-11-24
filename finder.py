@@ -1,6 +1,4 @@
 import argparse
-from os import stat
-import xml.etree.ElementTree as ET
 import globals
 import csv
 import random
@@ -35,11 +33,6 @@ def read_data(data_file):
     for (j, line) in enumerate(data):
         for i in range(len(var_header)):
             var_data[i].append(float(line[i]))
-    
-    # var_dict = dict()
-    # for i in range(len(var_header)):
-    #     var_dict[var_header[i]] = var_data[i]
-    # return (const_dict, var_dict)
     return (const_header, const_values, var_header, var_data)
 
 def generate_value(len_const, len_var, len_var_data):
@@ -74,9 +67,11 @@ def generate_initial_statements(num_population, len_const, len_var, len_var_data
     return population
 
 def calculate_score(statement, const_values, variable_data):
+    time_len = []
     if statement.p_left.v_left.type == globals.VAL_TYPE_VAR:
         lp_lv = variable_data[statement.p_left.v_left.index]
         lp_lv_t = statement.p_left.v_left.time
+        time_len.append(lp_lv_t)
     else:
         lp_lv = [const_values[statement.p_left.v_left.index]]*len(variable_data[statement.p_left.v_left.index])
         lp_lv_t = 0
@@ -84,6 +79,7 @@ def calculate_score(statement, const_values, variable_data):
     if statement.p_left.v_right.type == globals.VAL_TYPE_VAR:
         lp_rv = variable_data[statement.p_left.v_right.index]
         lp_rv_t = statement.p_left.v_right.time
+        time_len.append(lp_rv_t)
     else:
         lp_rv = [const_values[statement.p_left.v_right.index]]*len(variable_data[statement.p_left.v_right.index])
         lp_rv_t = 0
@@ -91,6 +87,7 @@ def calculate_score(statement, const_values, variable_data):
     if statement.p_right.v_left.type == globals.VAL_TYPE_VAR:
         rp_lv = variable_data[statement.p_right.v_left.index]
         rp_lv_t = statement.p_right.v_left.time
+        time_len.append(rp_lv_t)
     else:
         rp_lv = [const_values[statement.p_right.v_left.index]]*len(variable_data[statement.p_right.v_left.index])
         rp_lv_t = 0
@@ -98,19 +95,34 @@ def calculate_score(statement, const_values, variable_data):
     if statement.p_right.v_right.type == globals.VAL_TYPE_VAR:
         rp_rv = variable_data[statement.p_right.v_right.index]
         rp_rv_t = statement.p_right.v_right.time
+        time_len.append(rp_rv_t)
     else:
         rp_rv = [const_values[statement.p_right.v_right.index]]*len(variable_data[statement.p_right.v_right.index])
         rp_rv_t = 0
 
     data_len = [len(lp_lv), len(lp_rv), len(rp_lv), len(rp_rv)]
-    time_len = [lp_lv_t, lp_rv_t, rp_lv_t, rp_rv_t]
 
-    min_len = min(data_len) - max(time_len)
+    min_time = min(time_len)
 
-    tp = 0 # true positive
-    tn = 0 # true negative
-    fp = 0 # false positive
-    fn = 0 # false negative
+    max_time = 0
+    if lp_lv_t != 0:
+        lp_lv_t -= min_time
+        max_time = max(max_time, lp_lv_t)
+    if lp_rv_t != 0:
+        lp_rv_t -= min_time
+        max_time = max(max_time, lp_rv_t)
+    if rp_lv_t != 0:
+        rp_lv_t -= min_time
+        max_time = max(max_time, rp_lv_t)
+    if rp_rv_t != 0:
+        rp_rv_t -= min_time
+        max_time = max(max_time, rp_rv_t)
+    min_len = min(data_len) - max_time
+
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
     for i in range(min_len):
         first_left  = lp_lv[i + lp_lv_t]
         first_right = lp_rv[i + lp_rv_t]
@@ -131,7 +143,7 @@ def calculate_score(statement, const_values, variable_data):
         score = 0
     else: 
         score = float(tp) / float(tp + tn) * 100.0
-    
+
     return (tp, tn, fp, fn, score)
 
 def evaluate_population(population, const_values, var_data):
