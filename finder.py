@@ -379,8 +379,9 @@ def convert_statement_with_header(statement, const_header, var_header):
 
     return retval
 
-def write_to_csv(population_fitness, const_header, var_header, parameters, output_prefix=''):
-    with open(output_prefix + 'evaluation.csv', 'w', newline='') as csvfile: 
+def write_to_csv(population_fitness, const_header, var_header, parameters, index, output_prefix=''):
+    file_name = output_prefix + 'evaluation_'+ str(index) +'.csv'
+    with open(file_name, 'w', newline='') as csvfile: 
         csv_writer = csv.writer(csvfile) 
         for p in parameters:
             csv_writer.writerow(p)
@@ -412,7 +413,8 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--population-size', default=100, type=int)
     parser.add_argument('-c', '--crossover-rate', default=0.6, type=float)
     parser.add_argument('-m', '--mutation-rate', default=0.2, type=float)
-    parser.add_argument('-b', '--budget', default=1, type=int)
+    parser.add_argument('-b', '--budget', default=100, type=int)
+    parser.add_argument('-r', '--repeat', default=10, type=int)
     
     args = parser.parse_args()
 
@@ -422,6 +424,7 @@ if __name__ == '__main__':
     crossover_rate = args.crossover_rate
     mutation_rate = args.mutation_rate
     budget = args.budget
+    repeat = args.repeat
     
     parameters = []
     parameters.append(['num_initial_pop', str(num_initial_pop)])
@@ -436,48 +439,44 @@ if __name__ == '__main__':
 
     
     (const_header, const_values, var_header, var_data) = read_data(data_file)
-    population = generate_initial_statements(num_initial_pop, len(const_values), len(var_data), len(var_data[0]))
-    
-    population_fitness = evaluate_population(population, const_values, var_data)
-    population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
 
-    idx = 0
-    while idx < budget:
-        idx += 1
-        parent_fitness = population_fitness[:num_population]
-        parents = [pf[0] for pf in parent_fitness]
-
-        p_len = len(parents)
-        p_half = int(p_len / 2)
-        offspring = []
-
-        is_prop_crossover = True
-        is_prop_mutation = True
-
-        for i in range(p_len):
-            if i >= p_half:
-                break
-            # print('index: ', i)
-            # print('\tParent 1: {0}'.format(convert_statement_to_string('', population_fitness[i][0])))
-            # print('\tParent 2: {0}'.format(convert_statement_to_string('', population_fitness[i+p_half][0])))
-            copy_s1 = parents[i].copy()
-            copy_s2 = parents[i+p_half].copy()
-            (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate, is_prop_crossover)
-            # print('Offspring-x 1: {0}'.format(convert_statement_to_string('', o1)))
-            # print('Offspring-x 2: {0}'.format(convert_statement_to_string('', o2)))
-            o1 = mutate(o1, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
-            o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
-            # print('\tOffspring-m 1: {0}'.format(convert_statement_to_string('', o1)))
-            # print('\tOffspring-m 2: {0}'.format(convert_statement_to_string('', o2)))
-            if check_statement_value_type(o1) and not o1 in parents:
-                offspring.append(o1)
-
-            if check_statement_value_type(o2) and not o2 in parents:
-                offspring.append(o2)
-            
-            
-        offspring_fitness = evaluate_population(offspring, const_values, var_data)
-        population_fitness = parent_fitness + offspring_fitness
+    for repeat_count in range(repeat):
+        population = generate_initial_statements(num_initial_pop, len(const_values), len(var_data), len(var_data[0]))
+        
+        population_fitness = evaluate_population(population, const_values, var_data)
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
-    parent_fitness = population_fitness[:num_population]
-    write_to_csv(parent_fitness, const_header, var_header, parameters, output_prefix)
+
+        idx = 0
+        while idx < budget:
+            idx += 1
+            parent_fitness = population_fitness[:num_population]
+            parents = [pf[0] for pf in parent_fitness]
+
+            p_len = len(parents)
+            p_half = int(p_len / 2)
+            offspring = []
+
+            is_prop_crossover = True
+            is_prop_mutation = True
+
+            for i in range(p_len):
+                if i >= p_half:
+                    break
+                copy_s1 = parents[i].copy()
+                copy_s2 = parents[i+p_half].copy()
+                (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate, is_prop_crossover)
+                o1 = mutate(o1, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
+                o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
+                if check_statement_value_type(o1) and not o1 in parents:
+                    offspring.append(o1)
+
+                if check_statement_value_type(o2) and not o2 in parents:
+                    offspring.append(o2)
+                
+                
+            offspring_fitness = evaluate_population(offspring, const_values, var_data)
+            population_fitness = parent_fitness + offspring_fitness
+            population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
+        parent_fitness = population_fitness[:num_population]
+        write_to_csv(parent_fitness, const_header, var_header, parameters, repeat_count, output_prefix)
+        
