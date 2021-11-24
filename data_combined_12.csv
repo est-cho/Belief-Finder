@@ -1,6 +1,6 @@
-﻿Veh 1 normal speed,Veh 1 max speed,Veh 1 min speed,Veh 1 color threshold,Veh 1 distance threshold 1,Veh 1 distance threshold 2,Veh 2 normal speed,Veh 2 max speed,Veh 2 min speed,Veh 2 color threshold,Veh 2 distance threshold 1,Veh 2 distance threshold 2,,,,,,,,,
-90,130,80,37,500,600,90,165,80,40,300,330,,,,,,,,,
- Veh 1 color, Veh 1 distance, Veh 1 speed,Veh 1 stop, Veh 1 step, Veh 1 deviation, Veh 1 integral, Veh 1 derivative,Veh 2 color,Veh 2  distance,Veh 2  speed,Veh 2 stop,Veh 2  step,Veh 2  deviation,Veh 2  integral,Veh 2  derivative,Veh 2  frontID,Veh 2  frontTime,Veh 2  frontStep,Veh 2  frontSpeed,Veh 2  frontDistance
+﻿Constant-Veh 1 Normal Speed,Constant-Veh 1 Max Speed,Constant-Veh Min Speed,Constant-Veh 1 Color Threshold,Constant-Veh 1 Distance Threshold 1,Constant-Veh 1 Distance Threshold 2,Constant-Veh 2 Max Speed,Constant-Veh 2 Color Threshold,Constant-Veh 2 Distance Threshold 1,Constant-Veh 2 Distance Threshold 2,,,,,,,,,,,
+90,130,80,37,500,600,165,40,300,330,,,,,,,,,,,
+Variable-Veh 1 Color,Variable-Veh 1 Distance,Variable-Veh 1 Speed,Variable-Veh 1 Stop,Variable-Veh 1 Step,Variable-Veh 1 Deviation,Variable-Veh 1 Integral,Variable-Veh 1 Derivative,Variable-Veh 2 Color,Variable-Veh 2 Distance,Variable-Veh 2 Speed,Variable-Veh 2 Stop,Variable-Veh 2 Step,Variable-Veh 2 Deviation,Variable-Veh 2 Integral,Variable-Veh 2 Derivative,Variable-Veh 2 FrontID,Variable-Veh 2 FrontTime,Variable-Veh 2 FrontStep,Variable-Veh 2 FrontSpeed,Variable-Veh 2 FrontDistance
 41,2336,91,0,0,3.5,0,-1,52,687,99.225,0,0,12,25,-1,1,256,0,90,1980
 17,2049,91.5,0,0,-20.5,0,-24,54,687,104.18625,0,0,14,39,2,1,256,0,90.5,2336
 33,2019,92,0,0,-4.5,0,16,49,687,109.3955625,0,0,9,0,-5,1,418,0,91,2049

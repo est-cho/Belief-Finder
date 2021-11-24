@@ -1,4 +1,5 @@
 import argparse
+from os import stat
 import xml.etree.ElementTree as ET
 import globals
 import csv
@@ -39,7 +40,7 @@ def read_data(data_file):
     # for i in range(len(var_header)):
     #     var_dict[var_header[i]] = var_data[i]
     # return (const_dict, var_dict)
-    return (const_values, var_data)
+    return (const_header, const_values, var_header, var_data)
 
 def generate_value(len_const, len_var, len_var_data):
     rand_v_type = random.randrange(len_const+len_var)
@@ -337,15 +338,48 @@ def convert_statement_to_string(prefix, s):
     out = out + s.p_right.v_right.type + '(i=' + str(s.p_right.v_right.index) + ', t=' + str(s.p_right.v_right.time) + '))'
     return out
 
-def write_to_csv(population_fitness, output_prefix=''):
+def convert_statement_with_header(statement, const_header, var_header):
+    retval = []
+    if statement.p_left.v_left.type == globals.VAL_TYPE_CONS:
+        retval.append(const_header[statement.p_left.v_left.index])
+    else:
+        retval.append(var_header[statement.p_left.v_left.index] + ' t+' + str(statement.p_left.v_left.time))
+
+    retval.append(statement.p_left.op)
+
+    if statement.p_left.v_right.type == globals.VAL_TYPE_CONS:
+        retval.append(const_header[statement.p_left.v_right.index])
+    else:
+        retval.append(var_header[statement.p_left.v_right.index] + ' t+' + str(statement.p_left.v_right.time))
+
+    if statement.p_right.v_left.type == globals.VAL_TYPE_CONS:
+        retval.append(const_header[statement.p_right.v_left.index])
+    else:
+        retval.append(var_header[statement.p_right.v_left.index] + ' t+' + str(statement.p_right.v_left.time))
+
+    retval.append(statement.p_right.op)
+
+    if statement.p_right.v_right.type == globals.VAL_TYPE_CONS:
+        retval.append(const_header[statement.p_right.v_right.index])
+    else:
+        retval.append(var_header[statement.p_right.v_right.index] + ' t+' + str(statement.p_right.v_right.time))
+
+    return retval
+
+def write_to_csv(population_fitness, const_header, var_header, output_prefix=''):
     with open(output_prefix + 'evaluation.csv', 'w', newline='') as csvfile: 
         csv_writer = csv.writer(csvfile) 
-        csv_writer.writerow(['Statements', 'tp', 'tn', 'fp', 'fn', 'Score'])
+        csv_writer.writerow(['LPLV', 'LPOP', 'LPRV', 'RPLV', 'RPOP', 'RPRV', 'tp', 'tn', 'fp', 'fn', 'Score'])
         idx = 1
         for m in sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True):
-            csv_writer.writerow([convert_statement_to_string(str(idx), m[0]), m[1], m[2], m[3], m[4], m[5]])
+            ret = convert_statement_with_header(m[0], const_header, var_header)
+            ret.append(m[1])
+            ret.append(m[2])
+            ret.append(m[3])
+            ret.append(m[4])
+            ret.append(m[5])
+            csv_writer.writerow(ret)
             idx += 1
-        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Belief-Finder')
@@ -371,7 +405,7 @@ if __name__ == '__main__':
         output_prefix = args.output_prefix + '_'
 
     
-    (const_values, var_data) = read_data(data_file)
+    (const_header, const_values, var_header, var_data) = read_data(data_file)
     population = generate_initial_statements(num_initial_pop, len(const_values), len(var_data), len(var_data[0]))
     
     population_fitness = evaluate_population(population, const_values, var_data)
@@ -413,4 +447,4 @@ if __name__ == '__main__':
         population_fitness = parent_fitness + offspring_fitness
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
     parent_fitness = population_fitness[:num_population]
-    write_to_csv(parent_fitness, output_prefix)
+    write_to_csv(parent_fitness, const_header, var_header, output_prefix)
