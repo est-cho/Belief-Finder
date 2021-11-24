@@ -68,7 +68,9 @@ def generate_initial_statements(num_population, len_const, len_var, len_var_data
     for i in range(num_population):
         lp = generate_proposition(len_const, len_var, len_var_data)
         rp = generate_proposition(len_const, len_var, len_var_data)
-        statement = globals.Statement(i, lp, rp)
+        statement = globals.Statement(0, lp, rp)
+        if statement in population:
+            print('statement already in population')
         population.append(statement)
     return population
 
@@ -366,9 +368,11 @@ def convert_statement_with_header(statement, const_header, var_header):
 
     return retval
 
-def write_to_csv(population_fitness, const_header, var_header, output_prefix=''):
+def write_to_csv(population_fitness, const_header, var_header, parameters, output_prefix=''):
     with open(output_prefix + 'evaluation.csv', 'w', newline='') as csvfile: 
         csv_writer = csv.writer(csvfile) 
+        for p in parameters:
+            csv_writer.writerow(p)
         csv_writer.writerow(['LPLV', 'LPOP', 'LPRV', 'RPLV', 'RPOP', 'RPRV', 'tp', 'tn', 'fp', 'fn', 'Score'])
         idx = 1
         for m in sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True):
@@ -399,6 +403,13 @@ if __name__ == '__main__':
     crossover_rate = args.crossover_rate
     mutation_rate = args.mutation_rate
     budget = args.budget
+    
+    parameters = []
+    parameters.append(['num_initial_pop', str(num_initial_pop)])
+    parameters.append(['num_population', str(num_population)])
+    parameters.append(['crossover_rate', str(crossover_rate)])
+    parameters.append(['mutation_rate', str(mutation_rate)])
+    parameters.append(['budget', str(budget)])
 
     output_prefix = ''
     if args.output_prefix:
@@ -415,11 +426,9 @@ if __name__ == '__main__':
     while idx < budget:
         idx += 1
         parent_fitness = population_fitness[:num_population]
-        best = parent_fitness[0]
-        # print('Best Fitness: {0}, tp: {2}\n\t{1}'.format(best[5], convert_statement_to_string('', best[0]), best[1]))
-        print('Best Fitness: {0}, tp: {1}'.format(best[5], best[1]))
+        parents = [pf[0] for pf in parent_fitness]
 
-        p_len = len(population_fitness)
+        p_len = len(parents)
         p_half = int(p_len / 2)
         offspring = []
 
@@ -429,22 +438,26 @@ if __name__ == '__main__':
         for i in range(p_len):
             if i >= p_half:
                 break
-            # print('Parent 1: {0}'.format(convert_statement_to_string('', population_fitness[i][0])))
-            # print('Parent 2: {0}'.format(convert_statement_to_string('', population_fitness[i+p_half][0])))
-            copy_s1 = population_fitness[i][0].copy()
-            copy_s2 = population_fitness[i+p_half][0].copy()
+            # print('index: ', i)
+            # print('\tParent 1: {0}'.format(convert_statement_to_string('', population_fitness[i][0])))
+            # print('\tParent 2: {0}'.format(convert_statement_to_string('', population_fitness[i+p_half][0])))
+            copy_s1 = parents[i].copy()
+            copy_s2 = parents[i+p_half].copy()
             (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate, is_prop_crossover)
             # print('Offspring-x 1: {0}'.format(convert_statement_to_string('', o1)))
             # print('Offspring-x 2: {0}'.format(convert_statement_to_string('', o2)))
             o1 = mutate(o1, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
             o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
-            # print('Offspring-m 1: {0}'.format(convert_statement_to_string('', o1)))
-            # print('Offspring-m 2: {0}'.format(convert_statement_to_string('', o2)))
-            offspring.append(o1)
-            offspring.append(o2)
+            # print('\tOffspring-m 1: {0}'.format(convert_statement_to_string('', o1)))
+            # print('\tOffspring-m 2: {0}'.format(convert_statement_to_string('', o2)))
+
+            if not o1 in parents:
+                offspring.append(o1)
+            if not o2 in parents:
+                offspring.append(o2)
             
         offspring_fitness = evaluate_population(offspring, const_values, var_data)
         population_fitness = parent_fitness + offspring_fitness
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
     parent_fitness = population_fitness[:num_population]
-    write_to_csv(parent_fitness, const_header, var_header, output_prefix)
+    write_to_csv(parent_fitness, const_header, var_header, parameters, output_prefix)
