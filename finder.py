@@ -65,13 +65,12 @@ def generate_proposition(len_const, len_var, len_var_data):
 def generate_initial_statements(num_population, len_const, len_var, len_var_data):
     population = []
 
-    for i in range(num_population):
+    while len(population) <= num_population:
         lp = generate_proposition(len_const, len_var, len_var_data)
         rp = generate_proposition(len_const, len_var, len_var_data)
         statement = globals.Statement(0, lp, rp)
-        if statement in population:
-            print('statement already in population')
-        population.append(statement)
+        if check_statement_value_type(statement):
+            population.append(statement)
     return population
 
 def calculate_score(statement, const_values, variable_data):
@@ -385,6 +384,14 @@ def write_to_csv(population_fitness, const_header, var_header, parameters, outpu
             csv_writer.writerow(ret)
             idx += 1
 
+def check_statement_value_type(statement):
+    if statement.p_left.v_left.type == globals.VAL_TYPE_CONS and statement.p_left.v_right.type == globals.VAL_TYPE_CONS:
+        return False
+    elif statement.p_right.v_left.type == globals.VAL_TYPE_CONS and statement.p_right.v_right.type == globals.VAL_TYPE_CONS:
+        return False
+    else:
+        return True
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Belief-Finder')
     parser.add_argument('-d', '--data', required=True)
@@ -450,11 +457,12 @@ if __name__ == '__main__':
             o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
             # print('\tOffspring-m 1: {0}'.format(convert_statement_to_string('', o1)))
             # print('\tOffspring-m 2: {0}'.format(convert_statement_to_string('', o2)))
-
-            if not o1 in parents:
+            if check_statement_value_type(o1) and not o1 in parents:
                 offspring.append(o1)
-            if not o2 in parents:
+
+            if check_statement_value_type(o2) and not o2 in parents:
                 offspring.append(o2)
+            
             
         offspring_fitness = evaluate_population(offspring, const_values, var_data)
         population_fitness = parent_fitness + offspring_fitness
