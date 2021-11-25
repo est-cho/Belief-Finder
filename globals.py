@@ -17,8 +17,6 @@ ATTRIB_RIGHT = 'right'
 
 VAL_TYPE_VAR = 'v'
 VAL_TYPE_CONS = 'c'
-VAL_FEILD_TYPE = ["color","speed","stop","step","deviation","integral","derivative","frontID","fronttime","frontspeed","frontdistance"]
-
 
 OPERATORS = ["==", "<=", ">=", "<", ">", "!="]
 OPERATOR_DICT = {"==": operator.eq, "<=": operator.le, ">=": operator.ge, 
@@ -42,26 +40,16 @@ class Value:
 
 @dataclass
 class Prop:
-    def __init__(self, left = Value(), op:str = '==', right = Value(), is_unit:bool = True):
-        self.left = left
-        self.op = op
-        self.right = right
-        self.is_unit = is_unit
-        if is_unit:
-            if type(left) != Value or type(right) != Value or (not op in OPERATORS):
-                raise ValueError('Unit Proposition Error')
-        else:
-            if type(left) != type(Prop) or type(right) != type(Prop) or (not op in SET_OPERATORS):
-                raise ValueError('Composite Proposition Error')
+     v_left: Value = Value()
+     op: str = ''
+     v_right: Value = Value()
 
-    def copy(self):
-        copy = Prop()
-        copy.left = self.left.copy()
-        copy.op = self.op
-        copy.right = self.right.copy()
-        copy.is_unit = self.is_unit
-        return copy
-
+     def copy(self):
+         copy = Prop()
+         copy.v_left = self.v_left.copy()
+         copy.op = self.op
+         copy.v_right = self.v_right.copy()
+         return copy
 
 @dataclass
 class Statement:

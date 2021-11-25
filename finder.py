@@ -3,7 +3,7 @@ import globals
 import csv
 import random
 
-
+VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step']
 
 def read_data(data_file):
     file = open(data_file,'r',encoding = 'utf-8-sig')
@@ -423,8 +423,6 @@ def check_prop_cohesion(proposition, const_header, var_header):
         return True
     else:
         return False
-
-VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative']
 
 def categorize_value(value):
     retval = ''
