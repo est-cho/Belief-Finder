@@ -17,35 +17,55 @@ ATTRIB_RIGHT = 'right'
 
 VAL_TYPE_VAR = 'v'
 VAL_TYPE_CONS = 'c'
+VAL_FEILD_TYPE = ["color","speed","stop","step","deviation","integral","derivative","frontID","fronttime","frontspeed","frontdistance"]
+
 
 OPERATORS = ["==", "<=", ">=", "<", ">", "!="]
 OPERATOR_DICT = {"==": operator.eq, "<=": operator.le, ">=": operator.ge, 
                 "<": operator.lt, ">": operator.gt, "!=": operator.ne}
+SET_OPERATORS = [operator.__and__, operator.__or__]
 
 @dataclass
 class Value:
     type: str = ''
     index: int = 0
     time: int = None
+    field: str = ''
 
     def copy(self):
         copy = Value()
         copy.type = self.type
         copy.index = self.index
         copy.time = self.time
+        copy.field = self.field
         return copy
 
 @dataclass
 class Prop:
-    v_left: Value = Value()
-    op: str = ''
-    v_right: Value = Value()
+    left = Value()
+    op:str = ''
+    right = Value()
+    is_unit:bool = True
+    
+    def __init__(self, left, op, right, is_unit):
+        self.left = left
+        self.op = op
+        self.right = right
+        self.is_unit = is_unit
+        if is_unit:
+            if type(left) != type(Value) or type(right) != type(Value) or (not op in OPERATORS):
+                raise ValueError('Unit Proposition Error')
+        else:
+            if type(left) != type(Prop) or type(right) != type(Prop) or (not op in SET_OPERATORS):
+                raise ValueError('Composite Proposition Error')
+
 
     def copy(self):
         copy = Prop()
-        copy.v_left = self.v_left.copy()
+        copy.left = self.left.copy()
         copy.op = self.op
-        copy.v_right = self.v_right.copy()
+        copy.right = self.right.copy()
+        copy.is_unit = self.is_unit
         return copy
 
 
