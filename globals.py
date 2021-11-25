@@ -42,23 +42,17 @@ class Value:
 
 @dataclass
 class Prop:
-    left = Value()
-    op:str = ''
-    right = Value()
-    is_unit:bool = True
-    
-    def __init__(self, left, op, right, is_unit):
+    def __init__(self, left = Value(), op:str = '==', right = Value(), is_unit:bool = True):
         self.left = left
         self.op = op
         self.right = right
         self.is_unit = is_unit
         if is_unit:
-            if type(left) != type(Value) or type(right) != type(Value) or (not op in OPERATORS):
+            if type(left) != Value or type(right) != Value or (not op in OPERATORS):
                 raise ValueError('Unit Proposition Error')
         else:
             if type(left) != type(Prop) or type(right) != type(Prop) or (not op in SET_OPERATORS):
                 raise ValueError('Composite Proposition Error')
-
 
     def copy(self):
         copy = Prop()
