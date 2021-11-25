@@ -3,6 +3,8 @@ import globals
 import csv
 import random
 
+
+
 def read_data(data_file):
     file = open(data_file,'r',encoding = 'utf-8-sig')
     data = csv.reader(file)
@@ -55,15 +57,17 @@ def generate_proposition(len_const, len_var, len_var_data):
     rv = generate_value(len_const, len_var, len_var_data)
     return globals.Prop(lv, op, rv)
 
-def generate_initial_statements(num_population, len_const, len_var, len_var_data):
+def generate_initial_statements(num_population, const_header, var_header, len_var_data):
     population = []
 
     while len(population) <= num_population:
-        lp = generate_proposition(len_const, len_var, len_var_data)
-        rp = generate_proposition(len_const, len_var, len_var_data)
-        statement = globals.Statement(0, lp, rp)
-        if check_statement_value_type(statement):
-            population.append(statement)
+        lp = generate_proposition(len(const_header), len(var_header), len_var_data)
+        rp = generate_proposition(len(const_header), len(var_header), len_var_data)
+
+        if check_prop_cohesion(lp, const_header, var_header) and check_prop_cohesion(rp, const_header, var_header):
+            statement = globals.Statement(0, lp, rp)
+            if check_statement_value_type(statement):
+                population.append(statement)
     return population
 
 def calculate_score(statement, const_values, variable_data):
@@ -405,6 +409,31 @@ def check_statement_value_type(statement):
     else:
         return True
 
+def check_prop_cohesion(proposition, const_header, var_header):
+    if proposition.v_left.type == globals.VAL_TYPE_CONS:
+        lv = const_header[proposition.v_left.index].lower()
+    else:
+        lv = var_header[proposition.v_left.index].lower()
+    if proposition.v_right.type == globals.VAL_TYPE_CONS:
+        rv = const_header[proposition.v_right.index].lower()
+    else:
+        rv = var_header[proposition.v_right.index].lower()
+
+    if categorize_value(lv) != ''  and categorize_value(lv) == categorize_value(rv):
+        return True
+    else:
+        return False
+
+VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative']
+
+def categorize_value(value):
+    retval = ''
+    for vt in VAL_FIELD_TYPE:
+        if vt in value:
+            retval = vt
+    return retval
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Belief-Finder')
     parser.add_argument('-d', '--data', required=True)
@@ -441,7 +470,7 @@ if __name__ == '__main__':
     (const_header, const_values, var_header, var_data) = read_data(data_file)
 
     for repeat_count in range(repeat):
-        population = generate_initial_statements(num_initial_pop, len(const_values), len(var_data), len(var_data[0]))
+        population = generate_initial_statements(num_initial_pop, const_header, var_header, len(var_data[0]))
         
         population_fitness = evaluate_population(population, const_values, var_data)
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
@@ -467,12 +496,14 @@ if __name__ == '__main__':
                 (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate, is_prop_crossover)
                 o1 = mutate(o1, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
                 o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
+
                 if check_statement_value_type(o1) and not o1 in parents:
-                    offspring.append(o1)
+                    if check_prop_cohesion(o1.p_left, const_header, var_header) and check_prop_cohesion(o1.p_right, const_header, var_header):
+                        offspring.append(o1)
 
                 if check_statement_value_type(o2) and not o2 in parents:
-                    offspring.append(o2)
-                
+                    if check_prop_cohesion(o2.p_left, const_header, var_header) and check_prop_cohesion(o2.p_right, const_header, var_header):
+                        offspring.append(o2)
                 
             offspring_fitness = evaluate_population(offspring, const_values, var_data)
             population_fitness = parent_fitness + offspring_fitness
