@@ -4,6 +4,7 @@ import csv
 import random
 
 VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step']
+PENALTY_COHESION = 0.02
 
 def read_data(data_file):
     file = open(data_file,'r',encoding = 'utf-8-sig')
@@ -64,10 +65,9 @@ def generate_initial_statements(num_population, const_header, var_header, len_va
         lp = generate_proposition(len(const_header), len(var_header), len_var_data)
         rp = generate_proposition(len(const_header), len(var_header), len_var_data)
 
-        if check_prop_cohesion(lp, const_header, var_header) and check_prop_cohesion(rp, const_header, var_header):
-            statement = globals.Statement(0, lp, rp)
-            if check_statement_value_type(statement):
-                population.append(statement)
+        statement = globals.Statement(0, lp, rp)
+        if check_statement_value_type(statement):
+            population.append(statement)
     return population
 
 def calculate_score(statement, const_values, variable_data):
@@ -147,6 +147,10 @@ def calculate_score(statement, const_values, variable_data):
         score = 0
     else: 
         score = float(tp) / float(tp + tn) * 100.0
+        if not check_prop_cohesion(statement.p_left, const_header, var_header):
+            score = score * (1-PENALTY_COHESION)
+        if not check_prop_cohesion(statement.p_right, const_header, var_header):
+            score = score * (1-PENALTY_COHESION)
 
     return (tp, tn, fp, fn, score)
 
@@ -496,12 +500,10 @@ if __name__ == '__main__':
                 o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
 
                 if check_statement_value_type(o1) and not o1 in parents:
-                    if check_prop_cohesion(o1.p_left, const_header, var_header) and check_prop_cohesion(o1.p_right, const_header, var_header):
-                        offspring.append(o1)
+                    offspring.append(o1)
 
                 if check_statement_value_type(o2) and not o2 in parents:
-                    if check_prop_cohesion(o2.p_left, const_header, var_header) and check_prop_cohesion(o2.p_right, const_header, var_header):
-                        offspring.append(o2)
+                    offspring.append(o2)
                 
             offspring_fitness = evaluate_population(offspring, const_values, var_data)
             population_fitness = parent_fitness + offspring_fitness
