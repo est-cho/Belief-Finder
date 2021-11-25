@@ -4,7 +4,23 @@ import csv
 import random
 
 VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step']
-PENALTY_COHESION = 0.02
+PENALTY_COHESION = 0.8
+PENALTY_TIME = 0.9
+TIME_DIFF = 100
+
+CFR = 1 # Coupling Full Reward
+CLR = 0.99 # Coupling Less Reward
+
+ENG_DEFINED = [
+        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
+        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
+        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR]
+    ]
 
 def read_data(data_file):
     file = open(data_file,'r',encoding = 'utf-8-sig')
@@ -51,7 +67,7 @@ def generate_value(len_const, len_var, len_var_data):
     return v
 
 def generate_proposition(len_const, len_var, len_var_data):
-    rand_op = random.randrange(6)
+    rand_op = random.randrange(len(globals.OPERATORS))
     op = globals.OPERATORS[rand_op]
 
     lv = generate_value(len_const, len_var, len_var_data)
@@ -61,7 +77,7 @@ def generate_proposition(len_const, len_var, len_var_data):
 def generate_initial_statements(num_population, const_header, var_header, len_var_data):
     population = []
 
-    while len(population) <= num_population:
+    while len(population) < num_population:
         lp = generate_proposition(len(const_header), len(var_header), len_var_data)
         rp = generate_proposition(len(const_header), len(var_header), len_var_data)
 
@@ -147,11 +163,9 @@ def calculate_score(statement, const_values, variable_data):
         score = 0
     else: 
         score = float(tp) / float(tp + tn) * 100.0
-        if not check_prop_cohesion(statement.p_left, const_header, var_header):
-            score = score * (1-PENALTY_COHESION)
-        if not check_prop_cohesion(statement.p_right, const_header, var_header):
-            score = score * (1-PENALTY_COHESION)
-
+        score = get_adjusted_score(score, statement, const_header, var_header)
+        if max_time >= TIME_DIFF:
+            score = score * (1-PENALTY_TIME)
     return (tp, tn, fp, fn, score)
 
 def evaluate_population(population, const_values, var_data):
@@ -306,11 +320,11 @@ def mutate_val_op(individual, mutation_rate, len_const, len_var, len_var_data):
     if is_replace:
         do_mutate = random.random() < mutation_rate
         if do_mutate:
-            rand_op = random.randrange(6)
+            rand_op = random.randrange(len(globals.OPERATORS))
             individual.p_left.op = globals.OPERATORS[rand_op]
         do_mutate = random.random() < mutation_rate
         if do_mutate:
-            rand_op = random.randrange(6)
+            rand_op = random.randrange(len(globals.OPERATORS))
             individual.p_right.op = globals.OPERATORS[rand_op]
         do_mutate = random.random() < mutation_rate
         if do_mutate:
@@ -413,7 +427,7 @@ def check_statement_value_type(statement):
     else:
         return True
 
-def check_prop_cohesion(proposition, const_header, var_header):
+def get_prop_value_names(proposition, const_header, var_header):
     if proposition.v_left.type == globals.VAL_TYPE_CONS:
         lv = const_header[proposition.v_left.index].lower()
     else:
@@ -422,17 +436,42 @@ def check_prop_cohesion(proposition, const_header, var_header):
         rv = const_header[proposition.v_right.index].lower()
     else:
         rv = var_header[proposition.v_right.index].lower()
+    return (lv, rv)
 
-    if categorize_value(lv) != ''  and categorize_value(lv) == categorize_value(rv):
-        return True
+def get_adjusted_score(raw_score, statement, const_header, var_header):
+    (is_left_cohesive, left_prop_id) = check_prop_cohesion(statement.p_left, const_header, var_header)
+    (is_right_cohesive, right_prop_id) = check_prop_cohesion(statement.p_right, const_header, var_header)
+
+    score = raw_score
+    if not is_left_cohesive:
+        score = score * (1-PENALTY_COHESION)
+    if not is_right_cohesive:
+        score = score * (1-PENALTY_COHESION)
+    
+    if is_left_cohesive and is_right_cohesive:
+        score = score * check_statement_coupling_reward(left_prop_id, right_prop_id)
+
+    return score
+
+def check_prop_cohesion(proposition, const_header, var_header):
+    (lv, rv) = get_prop_value_names(proposition, const_header, var_header)
+
+    left_id = categorize_value(lv)
+    right_id = categorize_value(rv)
+    
+    if left_id != -1  and left_id == right_id:
+        return (True, left_id)
     else:
-        return False
+        return (False, 0)
+
+def check_statement_coupling_reward(pl_id, pr_id):
+    return ENG_DEFINED[pl_id][pr_id]
 
 def categorize_value(value):
-    retval = ''
-    for vt in VAL_FIELD_TYPE:
+    retval = -1
+    for (i, vt) in enumerate(VAL_FIELD_TYPE):
         if vt in value:
-            retval = vt
+            retval = i
     return retval
 
 
@@ -445,7 +484,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--crossover-rate', default=0.6, type=float)
     parser.add_argument('-m', '--mutation-rate', default=0.2, type=float)
     parser.add_argument('-b', '--budget', default=100, type=int)
-    parser.add_argument('-r', '--repeat', default=10, type=int)
+    parser.add_argument('-r', '--repeat', default=1, type=int)
     
     args = parser.parse_args()
 
@@ -473,7 +512,6 @@ if __name__ == '__main__':
 
     for repeat_count in range(repeat):
         population = generate_initial_statements(num_initial_pop, const_header, var_header, len(var_data[0]))
-        
         population_fitness = evaluate_population(population, const_values, var_data)
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
 
