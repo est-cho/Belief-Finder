@@ -84,7 +84,7 @@ def generate_initial_statements(num_population, const_header, var_header, len_va
         rp = generate_proposition(len(const_header), len(var_header), len_var_data)
 
         statement = globals.Statement(0, lp, rp)
-        if check_statement_value_type(statement):
+        if check_statement(statement):
             population.append(statement)
     return population
 
@@ -426,10 +426,23 @@ def write_to_csv(population_fitness, const_header, var_header, parameters, index
 def check_statement_value_type(statement):
     if statement.p_left.v_left.type == globals.VAL_TYPE_CONS and statement.p_left.v_right.type == globals.VAL_TYPE_CONS:
         return False
-    elif statement.p_right.v_left.type == globals.VAL_TYPE_CONS and statement.p_right.v_right.type == globals.VAL_TYPE_CONS:
+    if statement.p_right.v_left.type == globals.VAL_TYPE_CONS and statement.p_right.v_right.type == globals.VAL_TYPE_CONS:
         return False
-    else:
-        return True
+    return True
+
+def check_statement_duplicate(statement):
+    if statement.p_left == statement.p_right:
+        return False
+    if statement.p_left.v_left == statement.p_left.v_right or statement.p_right.v_left == statement.p_right.v_right:
+        return False
+    return True
+
+def check_statement(statement):
+    if not check_statement_value_type(statement):
+        return False
+    if not check_statement_duplicate(statement):
+        return False
+    return True
 
 def get_prop_value_names(proposition, const_header, var_header):
     if proposition.v_left.type == globals.VAL_TYPE_CONS:
@@ -538,11 +551,10 @@ if __name__ == '__main__':
                 (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate)
                 o1 = mutate(o1, mutation_rate, len(const_values), len(var_data), len(var_data[0]))
                 o2 = mutate(o2, mutation_rate, len(const_values), len(var_data), len(var_data[0]))
-
-                if check_statement_value_type(o1) and not o1 in parents:
+                if check_statement(o1) and not o1 in parents and not o1 in offspring:
                     offspring.append(o1)
 
-                if check_statement_value_type(o2) and not o2 in parents:
+                if check_statement(o2) and not o2 in parents and not o2 in offspring:
                     offspring.append(o2)
 
             population = parents + offspring

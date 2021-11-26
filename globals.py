@@ -18,7 +18,8 @@ ATTRIB_RIGHT = 'right'
 VAL_TYPE_VAR = 'v'
 VAL_TYPE_CONS = 'c'
 
-OPERATORS = ["==", "<=", ">=", "<", ">", "!="]
+OPERATORS = ["<=", ">="]
+# OPERATORS = ["==", "<=", ">=", "<", ">", "!="]
 OPERATOR_DICT = {"==": operator.eq, "<=": operator.le, ">=": operator.ge, 
                 "<": operator.lt, ">": operator.gt, "!=": operator.ne}
 SET_OPERATORS = [operator.__and__, operator.__or__]
