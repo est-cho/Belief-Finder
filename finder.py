@@ -3,24 +3,26 @@ import globals
 import csv
 import random
 
-VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step']
-PENALTY_COHESION = 0.8
+VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step', 'angle']
 PENALTY_TIME = 0.9
 TIME_DIFF = 100
 
 CFR = 1 # Coupling Full Reward
-CLR = 0.99 # Coupling Less Reward
+CLR = 1 # Coupling Less Reward
 
 ENG_DEFINED = [
-        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
-        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR],
-        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR]
+        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR, CLR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
+        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR, CLR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
+        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR, CLR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
+        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR]
     ]
+
+penalty_cohesion = 0
 
 def read_data(data_file):
     file = open(data_file,'r',encoding = 'utf-8-sig')
@@ -175,8 +177,9 @@ def evaluate_population(population, const_values, var_data):
         pop_fit.append((p, tp, tn, fp, fn, score))
     return pop_fit
 
-def crossover(copy_s1, copy_s2, crossover_rate, is_prop):
-    if is_prop:
+def crossover(copy_s1, copy_s2, crossover_rate):
+    is_prop = random.random()
+    if is_prop < 1.0:
         (o1, o2) = crossover_prop(copy_s1, copy_s2, crossover_rate)
     else:
         (o1, o2) = crossover_val_op(copy_s1, copy_s2, crossover_rate)
@@ -291,8 +294,9 @@ def crossover_val_op(copy_s1, copy_s2, crossover_rate):
                 (copy_s1.p_right.v_right, copy_s2.p_left.v_left) = (copy_s2.p_left.v_left, copy_s1.p_right.v_right)
     return (copy_s1, copy_s2)
 
-def mutate(individual, mutation_rate, is_prop, len_const, len_var, len_var_data):
-    if is_prop:
+def mutate(individual, mutation_rate, len_const, len_var, len_var_data):
+    is_prop = random.random()
+    if is_prop < 1.0:
         o1 = mutate_prop(individual, mutation_rate, len_const, len_var, len_var_data)
     else:
         o1 = mutate_val_op(individual, mutation_rate, len_const, len_var, len_var_data)
@@ -444,9 +448,9 @@ def get_adjusted_score(raw_score, statement, const_header, var_header):
 
     score = raw_score
     if not is_left_cohesive:
-        score = score * (1-PENALTY_COHESION)
+        score = score * (1-penalty_cohesion)
     if not is_right_cohesive:
-        score = score * (1-PENALTY_COHESION)
+        score = score * (1-penalty_cohesion)
     
     if is_left_cohesive and is_right_cohesive:
         score = score * check_statement_coupling_reward(left_prop_id, right_prop_id)
@@ -511,6 +515,7 @@ if __name__ == '__main__':
     (const_header, const_values, var_header, var_data) = read_data(data_file)
 
     for repeat_count in range(repeat):
+        penalty_cohesion = 0
         population = generate_initial_statements(num_initial_pop, const_header, var_header, len(var_data[0]))
         population_fitness = evaluate_population(population, const_values, var_data)
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
@@ -525,27 +530,25 @@ if __name__ == '__main__':
             p_half = int(p_len / 2)
             offspring = []
 
-            is_prop_crossover = True
-            is_prop_mutation = True
-
             for i in range(p_len):
                 if i >= p_half:
                     break
                 copy_s1 = parents[i].copy()
                 copy_s2 = parents[i+p_half].copy()
-                (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate, is_prop_crossover)
-                o1 = mutate(o1, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
-                o2 = mutate(o2, mutation_rate, is_prop_mutation, len(const_values), len(var_data), len(var_data[0]))
+                (o1, o2) = crossover(copy_s1, copy_s2, crossover_rate)
+                o1 = mutate(o1, mutation_rate, len(const_values), len(var_data), len(var_data[0]))
+                o2 = mutate(o2, mutation_rate, len(const_values), len(var_data), len(var_data[0]))
 
                 if check_statement_value_type(o1) and not o1 in parents:
                     offspring.append(o1)
 
                 if check_statement_value_type(o2) and not o2 in parents:
                     offspring.append(o2)
-                
-            offspring_fitness = evaluate_population(offspring, const_values, var_data)
-            population_fitness = parent_fitness + offspring_fitness
+
+            population = parents + offspring
+            population_fitness = evaluate_population(population, const_values, var_data)
             population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
+            penalty_cohesion += float(1/budget)
         parent_fitness = population_fitness[:num_population]
         write_to_csv(parent_fitness, const_header, var_header, parameters, repeat_count, output_prefix)
         
