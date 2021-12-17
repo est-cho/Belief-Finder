@@ -7,7 +7,7 @@ VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'deriva
 VAL_SYS_TYPE = ['veh 1', 'veh 2']
 
 PENALTY_TIME = 0.9
-TIME_DIFF = 100
+TIME_DIFF = 30
 
 CFR = 1 # Coupling Full Reward
 CLR = 1 # Coupling Less Reward
@@ -64,7 +64,7 @@ def generate_value(len_const, len_var, len_var_data):
     if rand_v_type < len_var:
         v.type = globals.VAL_TYPE_VAR
         v.index = random.randrange(len_var)
-        v.time = random.randrange(len_var_data)
+        v.time = random.randrange(TIME_DIFF)
     else:
         v.type = globals.VAL_TYPE_CONS
         v.index = random.randrange(len_const)
