@@ -4,6 +4,7 @@ import csv
 import random
 
 VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step', 'angle']
+VAL_SYS_TYPE = ['veh1', 'veh2']
 PENALTY_TIME = 0.9
 TIME_DIFF = 100
 
@@ -87,6 +88,28 @@ def generate_initial_statements(num_population, const_header, var_header, len_va
         if check_statement(statement):
             population.append(statement)
     return population
+
+def convert_time(statement):
+    list_time = []
+    if statement.p_left.v_left.type == globals.VAL_TYPE_VAR:
+        list_time.append(statement.p_left.v_left.time)
+    if statement.p_left.v_right.type == globals.VAL_TYPE_VAR:
+        list_time.append(statement.p_left.v_right.time)
+    if statement.p_right.v_left.type == globals.VAL_TYPE_VAR:
+        list_time.append(statement.p_right.v_left.time)
+    if statement.p_right.v_right.type == globals.VAL_TYPE_VAR:
+        list_time.append(statement.p_right.v_right.time)
+    
+    min_time = min(list_time)
+    if statement.p_left.v_left.type == globals.VAL_TYPE_VAR:
+        statement.p_left.v_left.time -= min_time
+    if statement.p_left.v_right.type == globals.VAL_TYPE_VAR:
+        statement.p_left.v_right.time -= min_time
+    if statement.p_right.v_left.type == globals.VAL_TYPE_VAR:
+        statement.p_right.v_left.time -= min_time
+    if statement.p_right.v_right.type == globals.VAL_TYPE_VAR:
+        statement.p_right.v_right.time -= min_time
+    return statement
 
 def calculate_score(statement, const_values, variable_data):
     time_len = []
@@ -378,6 +401,7 @@ def convert_statement_to_string(prefix, s):
     return out
 
 def convert_statement_with_header(statement, const_header, var_header):
+    statement = convert_time(statement)
     retval = []
     if statement.p_left.v_left.type == globals.VAL_TYPE_CONS:
         retval.append(const_header[statement.p_left.v_left.index])
@@ -433,6 +457,10 @@ def check_statement_value_type(statement):
 def check_statement_duplicate(statement):
     if statement.p_left == statement.p_right:
         return False
+    
+    if statement.p_left.v_left == statement.p_right.v_right and statement.p_left.v_right == statement.p_right.v_left and statement.p_left.op != statement.p_right.op:
+        return False
+
     if statement.p_left.v_left == statement.p_left.v_right or statement.p_right.v_left == statement.p_right.v_right:
         return False
     return True
