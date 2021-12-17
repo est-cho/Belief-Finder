@@ -4,7 +4,8 @@ import csv
 import random
 
 VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'derivative', 'stop', 'step', 'angle']
-VAL_SYS_TYPE = ['veh1', 'veh2']
+VAL_SYS_TYPE = ['veh 1', 'veh 2']
+
 PENALTY_TIME = 0.9
 TIME_DIFF = 100
 
@@ -23,7 +24,7 @@ ENG_DEFINED = [
         [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR]
     ]
 
-penalty_cohesion = 0
+
 
 def read_data(data_file):
     file = open(data_file,'r',encoding = 'utf-8-sig')
@@ -111,7 +112,7 @@ def convert_time(statement):
         statement.p_right.v_right.time -= min_time
     return statement
 
-def calculate_score(statement, const_values, variable_data):
+def calculate_score(statement, const_values, variable_data, penalty_cohesion):
     time_len = []
     if statement.p_left.v_left.type == globals.VAL_TYPE_VAR:
         lp_lv = variable_data[statement.p_left.v_left.index]
@@ -188,15 +189,15 @@ def calculate_score(statement, const_values, variable_data):
         score = 0
     else: 
         score = float(tp) / float(tp + tn) * 100.0
-        score = get_adjusted_score(score, statement, const_header, var_header)
+        score = get_adjusted_score(score, statement, const_header, var_header, penalty_cohesion)
         if max_time >= TIME_DIFF:
             score = score * (1-PENALTY_TIME)
     return (tp, tn, fp, fn, score)
 
-def evaluate_population(population, const_values, var_data):
+def evaluate_population(population, const_values, var_data, penalty_cohesion):
     pop_fit = []
     for p in population:
-        (tp, tn, fp, fn, score) = calculate_score(p, const_values, var_data)
+        (tp, tn, fp, fn, score) = calculate_score(p, const_values, var_data, penalty_cohesion)
         pop_fit.append((p, tp, tn, fp, fn, score))
     return pop_fit
 
@@ -483,17 +484,25 @@ def get_prop_value_names(proposition, const_header, var_header):
         rv = var_header[proposition.v_right.index].lower()
     return (lv, rv)
 
-def get_adjusted_score(raw_score, statement, const_header, var_header):
-    (is_left_cohesive, left_prop_id) = check_prop_cohesion(statement.p_left, const_header, var_header)
-    (is_right_cohesive, right_prop_id) = check_prop_cohesion(statement.p_right, const_header, var_header)
+def get_adjusted_score(raw_score, statement, const_header, var_header,penalty_cohesion):
+    left_field_cohesion, is_left_sys_cohesive = check_prop_cohesion(statement.p_left, const_header, var_header)
+    right_field_cohesion, is_right_sys_cohesive = check_prop_cohesion(statement.p_right, const_header, var_header)
+
+    (is_left_field_cohesive, left_prop_id) = left_field_cohesion
+    (is_right_field_cohesive, right_prop_id) = right_field_cohesion
 
     score = raw_score
-    if not is_left_cohesive:
+    if not is_left_field_cohesive:
         score = score * (1-penalty_cohesion)
-    if not is_right_cohesive:
+    if not is_right_field_cohesive:
         score = score * (1-penalty_cohesion)
     
-    if is_left_cohesive and is_right_cohesive:
+    if not is_left_sys_cohesive:
+        score = score * (1-penalty_cohesion)
+    if not is_right_sys_cohesive:
+        score = score * (1-penalty_cohesion)
+    
+    if is_left_field_cohesive and is_right_field_cohesive:
         score = score * check_statement_coupling_reward(left_prop_id, right_prop_id)
 
     return score
@@ -501,23 +510,34 @@ def get_adjusted_score(raw_score, statement, const_header, var_header):
 def check_prop_cohesion(proposition, const_header, var_header):
     (lv, rv) = get_prop_value_names(proposition, const_header, var_header)
 
-    left_id = categorize_value(lv)
-    right_id = categorize_value(rv)
+    left_field_index, left_sys_index = categorize_value(lv)
+    right_field_index, right_sys_index = categorize_value(rv)
     
-    if left_id != -1  and left_id == right_id:
-        return (True, left_id)
-    else:
-        return (False, 0)
+    field_cohesion = (False, 0)
+    if left_field_index != -1 and left_field_index == right_field_index:
+        field_cohesion = (True, left_field_index)
+
+    sys_cohesion = False
+    if left_sys_index != -1 and left_sys_index == right_sys_index:
+        sys_cohesion = True
+    
+    return field_cohesion, sys_cohesion
 
 def check_statement_coupling_reward(pl_id, pr_id):
     return ENG_DEFINED[pl_id][pr_id]
 
 def categorize_value(value):
-    retval = -1
+    retval_field_index = -1
     for (i, vt) in enumerate(VAL_FIELD_TYPE):
         if vt in value:
-            retval = i
-    return retval
+            retval_field_index = i
+
+    retval_sys_index = -1
+    for (j, st) in enumerate(VAL_SYS_TYPE):
+        if st in value:
+            retval_sys_index = j
+
+    return retval_field_index, retval_sys_index
 
 
 if __name__ == '__main__':
@@ -552,13 +572,12 @@ if __name__ == '__main__':
     if args.output_prefix:
         output_prefix = args.output_prefix + '_'
 
-    
     (const_header, const_values, var_header, var_data) = read_data(data_file)
 
     for repeat_count in range(repeat):
         penalty_cohesion = 0
         population = generate_initial_statements(num_initial_pop, const_header, var_header, len(var_data[0]))
-        population_fitness = evaluate_population(population, const_values, var_data)
+        population_fitness = evaluate_population(population, const_values, var_data, penalty_cohesion)
         population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
 
         idx = 0
@@ -586,7 +605,7 @@ if __name__ == '__main__':
                     offspring.append(o2)
 
             population = parents + offspring
-            population_fitness = evaluate_population(population, const_values, var_data)
+            population_fitness = evaluate_population(population, const_values, var_data, penalty_cohesion)
             population_fitness = sorted(population_fitness, key=lambda x: (x[5], x[1]), reverse=True)
             penalty_cohesion += float(1/budget)
         parent_fitness = population_fitness[:num_population]
