@@ -10,18 +10,18 @@ PENALTY_TIME = 0.9
 TIME_DIFF = 30
 
 CFR = 1 # Coupling Full Reward
-CLR = 1 # Coupling Less Reward
+CLR = 0.9 # Coupling Less Reward
 
-ENG_DEFINED = [
-        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR, CLR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
-        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR, CLR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
-        [CFR, CLR, CFR, CLR, CLR, CLR, CFR, CLR, CLR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR],
-        [CLR, CFR, CLR, CFR, CFR, CFR, CLR, CFR, CFR]
+COUPLING_MATRIX = [
+        [CLR, CFR, CFR, CFR, CFR, CFR, CFR, CFR, CFR],
+        [CFR, CLR, CFR, CFR, CFR, CFR, CFR, CFR, CFR],
+        [CFR, CFR, CLR, CFR, CFR, CFR, CFR, CFR, CFR],
+        [CFR, CFR, CFR, CLR, CFR, CFR, CFR, CFR, CFR],
+        [CFR, CFR, CFR, CFR, CLR, CFR, CFR, CFR, CFR],
+        [CFR, CFR, CFR, CFR, CFR, CLR, CFR, CFR, CFR],
+        [CFR, CFR, CFR, CFR, CFR, CFR, CLR, CFR, CFR],
+        [CFR, CFR, CFR, CFR, CFR, CFR, CFR, CLR, CFR],
+        [CFR, CFR, CFR, CFR, CFR, CFR, CFR, CFR, CLR]
     ]
 
 
@@ -485,11 +485,14 @@ def get_prop_value_names(proposition, const_header, var_header):
     return (lv, rv)
 
 def get_adjusted_score(raw_score, statement, const_header, var_header,penalty_cohesion):
-    left_field_cohesion, is_left_sys_cohesive = check_prop_cohesion(statement.p_left, const_header, var_header)
-    right_field_cohesion, is_right_sys_cohesive = check_prop_cohesion(statement.p_right, const_header, var_header)
+    left_field_cohesion, left_sys_cohesion = check_prop_cohesion(statement.p_left, const_header, var_header)
+    right_field_cohesion, right_sys_cohesion = check_prop_cohesion(statement.p_right, const_header, var_header)
 
     (is_left_field_cohesive, left_prop_id) = left_field_cohesion
     (is_right_field_cohesive, right_prop_id) = right_field_cohesion
+
+    (is_left_sys_cohesive, left_sys_id) = left_sys_cohesion
+    (is_right_sys_cohesive, right_sys_id) = right_sys_cohesion
 
     score = raw_score
     if not is_left_field_cohesive:
@@ -502,8 +505,9 @@ def get_adjusted_score(raw_score, statement, const_header, var_header,penalty_co
     if not is_right_sys_cohesive:
         score = score * (1-penalty_cohesion)
     
-    if is_left_field_cohesive and is_right_field_cohesive:
-        score = score * check_statement_coupling_reward(left_prop_id, right_prop_id)
+    if left_sys_id == right_sys_id:
+        if is_left_field_cohesive and is_right_field_cohesive:
+            score = score * check_statement_coupling_reward(left_prop_id, right_prop_id)
 
     return score
 
@@ -517,14 +521,14 @@ def check_prop_cohesion(proposition, const_header, var_header):
     if left_field_index != -1 and left_field_index == right_field_index:
         field_cohesion = (True, left_field_index)
 
-    sys_cohesion = False
+    sys_cohesion = (False, 0)
     if left_sys_index != -1 and left_sys_index == right_sys_index:
-        sys_cohesion = True
+        sys_cohesion = (True, left_sys_index)
     
     return field_cohesion, sys_cohesion
 
 def check_statement_coupling_reward(pl_id, pr_id):
-    return ENG_DEFINED[pl_id][pr_id]
+    return COUPLING_MATRIX[pl_id][pr_id]
 
 def categorize_value(value):
     retval_field_index = -1
