@@ -7,21 +7,20 @@ VAL_FIELD_TYPE = ['speed', 'color', 'distance', 'integral', 'deviation', 'deriva
 VAL_SYS_TYPE = ['veh 1', 'veh 2']
 
 PENALTY_TIME = 0.9
-TIME_DIFF = 30
+MAX_TIME_DIFF = 30
 
-CFR = 1 # Coupling Full Reward
-CLR = 0.9 # Coupling Less Reward
+PENALTY_COUPLING = 0.1
 
 COUPLING_MATRIX = [
-        [CLR, CFR, CFR, CFR, CFR, CFR, CFR, CFR, CFR],
-        [CFR, CLR, CFR, CFR, CFR, CFR, CFR, CFR, CFR],
-        [CFR, CFR, CLR, CFR, CFR, CFR, CFR, CFR, CFR],
-        [CFR, CFR, CFR, CLR, CFR, CFR, CFR, CFR, CFR],
-        [CFR, CFR, CFR, CFR, CLR, CFR, CFR, CFR, CFR],
-        [CFR, CFR, CFR, CFR, CFR, CLR, CFR, CFR, CFR],
-        [CFR, CFR, CFR, CFR, CFR, CFR, CLR, CFR, CFR],
-        [CFR, CFR, CFR, CFR, CFR, CFR, CFR, CLR, CFR],
-        [CFR, CFR, CFR, CFR, CFR, CFR, CFR, CFR, CLR]
+        [PENALTY_COUPLING, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, PENALTY_COUPLING, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, PENALTY_COUPLING, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, PENALTY_COUPLING, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, PENALTY_COUPLING, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, PENALTY_COUPLING, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, PENALTY_COUPLING, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, PENALTY_COUPLING, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, PENALTY_COUPLING]
     ]
 
 
@@ -64,7 +63,7 @@ def generate_value(len_const, len_var, len_var_data):
     if rand_v_type < len_var:
         v.type = globals.VAL_TYPE_VAR
         v.index = random.randrange(len_var)
-        v.time = random.randrange(TIME_DIFF)
+        v.time = random.randrange(MAX_TIME_DIFF)
     else:
         v.type = globals.VAL_TYPE_CONS
         v.index = random.randrange(len_const)
@@ -190,7 +189,7 @@ def calculate_score(statement, const_values, variable_data, penalty_cohesion):
     else: 
         score = float(tp) / float(tp + tn) * 100.0
         score = get_adjusted_score(score, statement, const_header, var_header, penalty_cohesion)
-        if max_time >= TIME_DIFF:
+        if max_time >= MAX_TIME_DIFF:
             score = score * (1-PENALTY_TIME)
     return (tp, tn, fp, fn, score)
 
@@ -505,9 +504,9 @@ def get_adjusted_score(raw_score, statement, const_header, var_header,penalty_co
     if not is_right_sys_cohesive:
         score = score * (1-penalty_cohesion)
     
-    if left_sys_id == right_sys_id:
+    if is_left_sys_cohesive and is_right_sys_cohesive and left_sys_id == right_sys_id:
         if is_left_field_cohesive and is_right_field_cohesive:
-            score = score * check_statement_coupling_reward(left_prop_id, right_prop_id)
+            score = score * (1-check_statement_coupling(left_prop_id, right_prop_id))
 
     return score
 
@@ -527,7 +526,7 @@ def check_prop_cohesion(proposition, const_header, var_header):
     
     return field_cohesion, sys_cohesion
 
-def check_statement_coupling_reward(pl_id, pr_id):
+def check_statement_coupling(pl_id, pr_id):
     return COUPLING_MATRIX[pl_id][pr_id]
 
 def categorize_value(value):
